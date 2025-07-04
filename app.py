@@ -1,27 +1,23 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-import os
+# Store chat messages in memory (basic example)
+chat_history = []
 
-app = Flask(__name__)
-CORS(app)
+@app.route("/api/chat", methods=["POST"])
+def receive_chat():
+    data = request.json
+    if not data or "username" not in data or "message" not in data:
+        return jsonify(success=False, error="Missing data"), 400
 
-latest_movement = {}
+    print(f"💬 {data['username']}: {data['message']}")
+    chat_history.append(data)
 
-@app.route('/')
-def home():
-    return "✅ Billy AI Server is Running"
+    # Optional: cap chat memory
+    if len(chat_history) > 50:
+        chat_history.pop(0)
 
-@app.route('/movement', methods=['POST'])
-def receive_movement():
-    global latest_movement
-    latest_movement = request.json
-    print("Received movement:", latest_movement)
-    return jsonify({"status": "ok"})
+    return jsonify(success=True)
 
-@app.route('/latest')
-def get_latest():
-    return jsonify(latest_movement)
-
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
+@app.route("/api/chat/latest", methods=["GET"])
+def get_latest_chat():
+    if not chat_history:
+        return jsonify(success=False, message="No chat"), 404
+    return jsonify(success=True, data=chat_history[-1])
